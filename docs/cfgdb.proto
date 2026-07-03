@@ -1,0 +1,60 @@
+syntax = "proto3";
+package cfgdb;
+
+// Reconstructed schema for carrierconfig confseq + manifest binary protobufs.
+// Observed, not official. Verified against cfgdb-zmbu_p25-260429-B-15308590.
+//
+// Authoritative confseq schema confseq_ext/confseq2.proto
+//   message data { string Revision=1; string Name=2; repeated seq nvitem=4; }
+//   message seq  { int64 id=1; repeated val item=2; }
+//   message val  { repeated int64 value=3; }
+// Confseqs encode Samsung Shannon modem NV items, NOT Android CarrierConfig keys.
+// id = zlib.crc32(NV-item-name) & 0xFFFFFFFF  (verified: 100% of 2,831 ids (2,658 plain + 173 additional from CLZ4 confseqs) in NV table).
+//
+// Storage forms:
+//   plain protobuf  : 945 files (decoded directly as ConfSeqData below)
+//   CLZ4-compressed : 104 files; magic 0x434c5a34 "CLZ4"; header <4s I I I> =
+//                     (magic, uncompressed_size, compressed_size, checksum) + LZ4-block payload.
+//                     Decodable in pure Python (see analysis/cfgdb_nvitems.py).
+//   PEM certificate : 6 files; begin with "-----BEGIN CERT"; not protobuf.
+
+// confseqs/<hash>: one NV-item config module (per-carrier or shared).
+// Filename = first 20 bytes of SHA-256 of raw bytes (sha256(content)[:20]).
+message ConfSeqData {
+  string Revision = 1;                // format version, e.g. "v1.0".."v10.0"
+  string Name = 2;                    // module name; .sim1/.sim2/.common/.multislot suffix = applicability
+  repeated NvItem nvitem = 4;
+}
+
+message NvItem {
+  int64 id = 1;                       // id = zlib.crc32(NV-item-name) & 0xFFFFFFFF
+  repeated Val item = 2;
+}
+
+message Val {
+  repeated int64 value = 3;           // the only observed field; a string is char-code values
+}
+
+// manifests/<hash>: same hash as the confman_<hash> SQLite table; lists the
+// confseqs composing one carrier's bundle.
+// Filename = first 20 bytes of SHA-256 of raw bytes (sha256(content)[:20]).
+message Manifest {
+  string format_version = 1;          // e.g. "v0.1"
+  string name = 2;
+  optional uint32 carrier_id = 3;     // OMITTED on some manifests (e.g. the wildcard carrier)
+  repeated ConfSeqRef refs = 5;
+}
+
+// Opaque flag fields (1,4,5,6,7,8) carry real, varying values whose meaning is
+// [unverified]. pixel-carrierconfig-toolbox therefore does NOT re-encode manifests
+// from a typed model (that would drop any un-modeled field); it surgically swaps the
+// fixed 20-byte content_hash in the original bytes, preserving every other byte.
+message ConfSeqRef {
+  optional uint32 flag1 = 1;          // present on some refs; meaning [unverified]
+  bytes content_hash = 2;             // first 20 bytes of SHA-256 (sha256(content)[:20]) of the referenced confseqs/<hash>
+  optional uint32 f4 = 4;             // meaning [unverified]
+  optional bytes  f5 = 5;             // length-delimited; present on some refs; meaning [unverified]
+  optional uint32 f6 = 6;             // meaning [unverified]
+  optional uint32 f7 = 7;             // varies per ref (e.g. 0x15, 0x16, ...); meaning [unverified]
+  optional uint32 f8 = 8;             // meaning [unverified]
+}

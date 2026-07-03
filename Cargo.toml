@@ -1,0 +1,21 @@
+[package]
+name = "pixel-carrierconfig-toolbox"
+version = "0.1.0"
+edition = "2024"
+description = "Decompile/recompile Google Pixel carrierconfig (cfgdb) modem NV-item config"
+authors = ["Artem Vorotnikov <artem@vorotnikov.me>"]
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+crc32fast = "1"
+indexmap = { version = "2", features = ["serde"] }
+lz4_flex = { version = "0.13", default-features = false, features = ["std"] }
+phf = "0.14"
+rusqlite = "0.40"
+sha2 = "0.11"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+toml = { version = "1", features = ["preserve_order"] }
+zip = { version = "8", default-features = false }

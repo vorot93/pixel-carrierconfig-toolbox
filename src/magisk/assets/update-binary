@@ -1,0 +1,25 @@
+#!/sbin/sh
+#
+# Minimal Magisk module installer for pixel-carrierconfig-toolbox.
+# Original work, Apache-2.0-only. Not derived from Magisk's template: it uses Magisk's
+# documented on-device interface (util_functions.sh / install_module). Targets
+# installation from the Magisk app.
+#
+# Magisk invokes: update-binary <api> <outfd> <module.zip>
+#
+umask 022
+OUTFD=$2
+ZIPFILE=$3
+
+# This module installs from the Magisk app (boot mode), not custom recovery.
+BOOTMODE=true
+
+# util_functions.sh provides install_module, ui_print, abort, MAGISKBIN, etc.
+if [ ! -f /data/adb/magisk/util_functions.sh ]; then
+  echo "ui_print ! Magisk not found — install this module from the Magisk app." >&"$OUTFD"
+  exit 1
+fi
+. /data/adb/magisk/util_functions.sh
+
+install_module
+exit 0
